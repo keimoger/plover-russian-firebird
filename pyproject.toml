@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plover-russian-firebird"
+version = "0.0.7"
+description = "Firebird: a Russian steno theory for Plover, built for the 22-key Stenograph/Stentura layout"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [
+    { email = "keimoger@gmail.com" },
+]
+keywords = ["plover", "plover_plugin", "steno", "russian", "stenography"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Utilities",
+]
+dependencies = []
+
+[project.entry-points."plover.system"]
+"Russian Firebird" = "plover_russian_firebird.system"
+
+[tool.setuptools.packages.find]
+include = ["plover_russian_firebird*"]
+
+[tool.setuptools.package-data]
+plover_russian_firebird = ["dictionaries/*.json"]

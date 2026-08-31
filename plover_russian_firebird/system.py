@@ -148,6 +148,7 @@ KEYMAPS = {
 DICTIONARIES_ROOT = "asset:plover_russian_firebird:dictionaries"
 DEFAULT_DICTIONARIES = [
     "firebird-user.json",
+    "firebird-commands.json",
     "firebird-main.json",
     "firebird-prefixes.json",
     "firebird-suffixes.json",

@@ -85,6 +85,10 @@ real Stenograph/Stentura serial hardware yet.
 - **`dictionaries/firebird-fingerspelling.json`** (§5) — all 33 Cyrillic letters,
   each `* + that letter's combo`, glued via `{&letter}` so consecutive
   fingerspelled letters concatenate without spaces.
+- **`dictionaries/firebird-commands.json`** (§14) — non-text output: a few
+  formatting strokes built directly by hand, plus whole Lapwing command
+  families (cursor movement, case formatting, more to come) ported by
+  physical key position rather than reinvented.
 **A computed grammar engine used to live here** — `dictionaries/endings.py`,
 a Plover "python dictionary" that inferred a noun's declension/gender
 from its own spelling and called a tested `grammar/nouns.py:decline_noun`
@@ -155,13 +159,17 @@ convention** (Lapwing fingerspells with the left-bank instance of a
 letter whenever one exists, for one consistent hand position rather
 than switching per letter). This was already true for every dual-bank
 direct key (В,К,М,Н,Р,С,Т) and every combo-based letter (Б,Г,Д,Ж,З,Ф,
-Х,Ц,Ч,Ш,Щ,Ъ — all built from left-bank keys already) without needing
+Х,Ц,Ч,Ш,Щ — all built from left-bank keys already) without needing
 any change. Л was the one holdout — its only key used to be `-Л`,
 right-bank — resolved for free by §12's onset combo: fingerspelling Л
 is now `Т-+Н-+*` (`ТН*`), left-bank like everything else, with no new
 design needed since the combo already existed for word-building. Ь
 stays right-bank regardless (`*ь`) — it's not a consonant, has no
-other key at all, and nothing else to move it to.
+other key at all, and nothing else to move it to. Ъ is the same kind
+of exception, and deliberately so: it's not a consonant either, so it
+doesn't need a left-bank slot at all, freeing its combo (`-ь+-н`, right
+bank) to skip the scarce left-bank real estate entirely (see §5's note
+on Ъ's combo).
 
 **Capitalization during fingerspelling uses `-Т`, matching Lapwing's
 own convention exactly** — checked directly against Lapwing's guide
@@ -175,11 +183,15 @@ board's own name for it. Every one of the 33 letters gets a capital
 variant this way (`[combo] + * + -Т`), e.g. с → `С*`/{&с},
 С → `С*Т`/{&С}; л → `ТН*`/{&л}, Л → `ТН*Т`/{&Л}. Safe for all 33: none
 of their base combos use `-Т` (right-bank) themselves — only the
-left-bank `Т-` appears in any combo (Д, Ж, Ц, Ъ, Т itself, and now Л's
-onset) — so adding `-Т` never risks pressing the same key twice.
+left-bank `Т-` appears in any combo (Д, Ж, Ц, Т itself, and now Л's
+onset), and Ъ's own combo (`-ь+-н`) doesn't touch `-Т` either — so
+adding `-Т` never risks pressing the same key twice.
 Verified against Plover's actual stroke encoder and checked
 collision-free against all 33 lowercase entries and every other
-dictionary: 66 total fingerspelling entries, all pairwise-unique.
+dictionary: 66 total fingerspelling entries, all pairwise-unique. (Ъ
+is the one entry that already sits entirely on the right side —
+`-ь+-н` — so its capital form adds `-Т` the same as every other
+letter, no special case needed.)
 
 **Design principle for the combos:** derive missing letters from
 Russian's own phonological structure rather than assigning arbitrary
@@ -210,7 +222,7 @@ dictionary entry, same as any other exception.
 | Д | Т- + М- | ТМ | ТМ* | voicing pair of Т |
 | Е | Е- | Е | Е* | direct key, left bank only |
 | Ё | Е- + -О | ЕО | Е*О | "y-glide + o", not merged with Е |
-| Ж | Т- + П- | ТП | ТП* | no anchor, dedicated combo |
+| Ж | К- + М- | КМ | КМ* | no anchor, dedicated combo — reassigned from an earlier `Т-+П-` (see §12) to stop sharing Т- with Л's onset combo |
 | З | С- + Р- | СР | СР* | voicing pair of С |
 | И | -И | И | *И | direct key |
 | Й | Е- + -И | ЕИ | Е*И | own combo — no longer shares with И (see below) |
@@ -230,7 +242,7 @@ dictionary entry, same as any other exception.
 | Ч | Р- + Н- | РН | РН* | no anchor, dedicated combo |
 | Ш | М- + Р- | МР | МР* | no anchor, dedicated combo |
 | Щ | П- + Н- | ПН | ПН* | no anchor, dedicated combo |
-| Ъ | Т- + К- | ТК | ТК* | standalone fingerspelling only — see note below |
+| Ъ | -ь + -н | ьн | *ьн | standalone fingerspelling only — see note below |
 | Ы | -О + -И | ОИ | *ОИ | hard partner of И |
 | Ь | -ь | ь | *ь | its own dedicated key — see note below |
 | Э | Е- + -А | ЕА | Е*А | hard partner of Е |
@@ -250,9 +262,19 @@ deliberately, so every letter — Й included — needs a combo no other
 letter uses. `Е+И` reuses the one vowel-pair combination freed up when we
 decided Ъ needed no in-word marker (see below).
 
-**Ъ's combo (Т+К) is arbitrary**, chosen only to be unclaimed — there's
-no phonological pairing to derive it from, since it isn't a sound in its
-own right, and real word-building never needs it (see below). **Ь is
+**Ъ's combo (`-ь` + `-н`) is arbitrary**, chosen only to be unclaimed —
+there's no phonological pairing to derive it from, since it isn't a
+sound in its own right, and real word-building never needs it (see
+below). It deliberately does *not* use a spare left-bank pair the way
+an earlier version (`Т-+К-`) did: ъ is the one letter that's
+fingerspelling-only and never appears in a word outline (see below),
+so its combo should be the cheapest one to "waste" — that frees `Т-+К-`
+itself back up as an available left-bank pair for a future consonant
+cluster, the scarce resource here (this section's known tradeoff,
+above). `-ь` immediately followed by `-н` with nothing else in the
+stroke isn't a pattern real word-building needs either: ь only ever
+softens the consonant right before it, so a bare ь+н with no consonant
+present doesn't correspond to anything a real word would spell. **Ь is
 different: it's assigned directly to its own key, `-ь`** — the last
 right-hand column, distinct from `-И`, the regular vowel, at a
 different board position. This isn't arbitrary — ь isn't a sound
@@ -298,7 +320,9 @@ doesn't eliminate it — a genuine
 survivor gets an explicit dictionary override, same as any other
 exception in this theory.
 
-Final chords for Ж/Ш/Ч/Щ/Х (right-bank only):
+Final chords for Ж/Ш/Ч/Щ/Х/Ц/Ф (right-bank only — none of these seven
+devoice into an existing right-bank letter's own key the way Г/Д/З do,
+so each needs a dedicated combo rather than sharing one for free):
 
 | Letter | Final combo |
 |---|---|
@@ -307,26 +331,79 @@ Final chords for Ж/Ш/Ч/Щ/Х (right-bank only):
 | Ч | -В + -Р |
 | Щ | -Л + -К |
 | Х | -К + -М |
+| Ц | -С + -Т |
+| Ф | -В + -М |
 
-These aren't a direct mirror of the initial chords — П (used in the
-initial chords for Ж and Щ) has no right-bank counterpart at all, so
-those two needed a fresh right-bank pair instead. Verified pairwise
-distinct from each other, from the vowel compounds, and from final Ц
-(-С + -Т).
+Ж/Ш/Ч/Щ/Х aren't a direct mirror of their own initial chords — Щ's
+initial chord uses `П-`, which has no right-bank counterpart at all,
+so it (and Ж, back when its own initial chord also used `П-`) needed a
+fresh right-bank pair instead of reusing pieces of the onset combo. Ц
+and Ф *are* a direct mirror, and simpler for it: each final combo is
+just its own initial combo's two letters, moved to the right bank
+(Ц's initial is `С-+Т-`, so final is `-С+-Т`; Ф's initial is `В-+М-`,
+so final is `-В+-М`) — available because С, Т, В, and М all already
+have real right-bank keys of their own for other purposes (final
+С/Т/В for the devoiced-partner and direct-consonant cases above, all
+compatible since Plover matches full key sets, not partial overlaps).
+**Ц's final combo already had two passing mentions above (both said
+"see final Ц" without ever placing it in this table) — filled in
+here, not new. Ф's had no combo at all until now — a genuine gap, not
+a documented placeholder:** nothing devoices *to* ф the way б devoices
+to п, so a ф-final word (шкаф, жираф) had no plain key to press,
+exactly the problem П had before its own combo below. Verified
+pairwise distinct from each other, from every combo above, the vowel
+compounds, and against the full dictionary set, the same way every
+other addition in this project has been.
 
 **Final combo for П** (-С + -В): unlike Ж/Ш/Ч/Щ/Х, П *does* have a
 direct key — but only on the left bank (`П-`), used for onset spelling
 (бак, поле). Nothing stood in for it in final position at all until
 now: б devoices to a п sound word-finally, and with no `-П` key,
 final-б words (е.g. "хлеб") had no plain key to press. `-С + -В` fills
-that gap, verified pairwise distinct from every combo above, the vowel
-compounds, and final Ц.
+that gap, verified pairwise distinct from every combo above and the
+vowel compounds.
+
+**Onset vs. coda at a glance** — every consonant's left-bank (onset)
+and right-bank (coda) representation side by side, since the two
+don't always follow the same pattern for the same letter:
+
+| Letter | Onset (left) | Coda (right) |
+|---|---|---|
+| Б | `П-+В-` (combo) | shares `-С+-В` (final-П combo) + `-н` override |
+| В | `В-` (direct) | `-В` (direct) |
+| Г | `П-+К-` (combo) | shares `-К` (devoices to к) |
+| Д | `Т-+М-` (combo) | shares `-Т` (devoices to т) |
+| Ж | `К-+М-` (combo) | `-Т+-Л` (dedicated combo) |
+| З | `С-+Р-` (combo) | shares `-С` (devoices to с) |
+| Й | `Е-+-И` (combo) | plain `-И` (§12) |
+| К | `К-` (direct) | `-К` (direct) |
+| Л | `Т-+Н-` (combo — **no direct key**, §12) | `-Л` (direct) |
+| М | `М-` (direct) | `-М` (direct) |
+| Н | `Н-` (direct, thumb) | `-н` (direct, dedicated key) |
+| П | `П-` (direct) | `-С+-В` (dedicated combo, shared with Б) |
+| Р | `Р-` (direct) | `-Р` (direct) |
+| С | `С-` (direct) | `-С` (direct) |
+| Т | `Т-` (direct) | `-Т` (direct) |
+| Ф | `В-+М-` (combo) | `-В+-М` (dedicated combo) |
+| Х | `К-+Н-` (combo) | `-К+-М` (dedicated combo) |
+| Ц | `С-+Т-` (combo) | `-С+-Т` (dedicated combo) |
+| Ч | `Р-+Н-` (combo) | `-В+-Р` (dedicated combo) |
+| Ш | `М-+Р-` (combo) | `-М+-Р` (dedicated combo) |
+| Щ | `П-+Н-` (combo) | `-Л+-К` (dedicated combo) |
+
+The pattern: onset is missing a direct key for exactly **one** letter
+(Л — the mirror image of English steno's own missing left-bank L,
+§12), while coda is missing one for **eleven** — Б,Г,Д,З piggyback for
+free on Russian's own final-devoicing (shares an existing key, no new
+combo), and the other seven (Ж,Ш,Ч,Щ,Х,Ц,Ф) each needed a genuinely
+dedicated combo, all now assigned above. Every consonant has coverage
+on both sides — nothing left unassigned as of this pass.
 
 **Ъ in real word-building needs no marker at all.** It doesn't create a
 genuine minimal-pair collision in the vast majority of cases —
 "обявление" and "подем" aren't words, so "объявление" and "подъём" can
 just use the plain я / ё chords and the dictionary supplies the correct
-spelling. The `*ТК` fingerspelling chord exists only so Ъ can be typed
+spelling. The `*ьн` fingerspelling chord exists only so Ъ can be typed
 as a standalone character (fingerspelling an unfamiliar word, spelling
 an acronym, etc.) — it's not used in normal word outlines.
 
@@ -835,12 +912,18 @@ none of the eight relevant base consonants — б,в,г,к,п,ф,з,с — use i
 their own combos, so it can never conflict with what it's clustering
 with) against every existing letter, the full natural-cluster
 inventory from the earlier (rejected) 8-chord attempt, and each of the
-eight б/в/г/к/п/ф/з/с combinations. Seven of eight are fully clean;
-one is a documented rare exception: пл- (`ТНП`) coincides with a
-hypothetical жн- cluster (жнец, жнивьё) — genuinely rare words, so
-this is treated as an acceptable minority collision (same category as
-Ц/З's own combos coinciding with ст-/ст- and ср- clusters, already
-accepted from the original alphabet design), not a blocker.
+eight б/в/г/к/п/ф/з/с combinations. Seven of eight were clean outright;
+the eighth, пл- (`ТНП`), coincided with a hypothetical жн- cluster
+(жнец, жнивьё), because Ж's old combo (`Т-+П-`) shared its `Т-` with
+Л's onset — the same `Т-` plus н directly, and п plus the same onset,
+landed on the identical three keys. Rather than accept that collision
+the way Ц/З's combos coinciding with ст-/ст- and ср- clusters were
+accepted from the original alphabet design, this one was closed at the
+root: Ж was reassigned to `К-+М-` (§5), an unclaimed pair with no key
+in common with Л's onset and no natural-cluster collision of its own
+(checked against the vocabulary source — no real Russian word starts
+with "км-"). жаба and жанр in `firebird-main.json` were updated to
+match. All eight are now fully clean.
 
 Applied concretely: "ло" in болото is now `ТНО` (was the cross-bank
 `ОЛ`); "ле" in поле is now `ТНЕ`, entirely left-bank since е is also a
@@ -853,14 +936,16 @@ conflict); блин (a genuine бл- cluster) is `ТПВНИн` (б=`П-`+`В-`,
 handles coda position unchanged: боль (`ПВОЛ`), щель (`ПНЕЛ`), стол
 (`СТОЛ`) are untouched.
 
-**One exception carries over unchanged: жаба (ж-а-б-а) stays
-`ТПА/ПВА` (жа-ба)**, not folded into the maximal-onset reasoning
-differently — pulling б into a stroke with ж would still require
-pressing `П-` twice (ж=`Т-+П-`, б=`П-+В-`), a hardware impossibility
-regardless of which splitting rule is in effect. Same category as the
-пл-/жн- collision above: the rule applies everywhere it *can*, and
-where it genuinely can't, that's an explicit, documented carve-out
-rather than a silently inconsistent one. Extending this combo to
+**One exception carries over: жаба (ж-а-б-а) still needs two strokes,
+`КМА/ПВА` (жа-ба)** — not folded into one, but for a different reason
+than before Ж's reassignment. ж (`К-+М-`) and б (`П-+В-`) no longer
+share a key, so pulling б into ж's stroke is no longer blocked by
+having to press one key twice; it's blocked by жаба's *two* separate
+"a" sounds, one per syllable, and a single stroke can only press `-А`
+once. Same underlying principle either way: the rule applies
+everywhere it *can*, and where it genuinely can't — whether from a
+shared key or, now, a repeated vowel — that's an explicit, documented
+carve-out rather than a silently inconsistent one. Extending this combo to
 heavier clusters (е.g. близко, where з and к would also need to fit
 alongside the бл- cluster in one stroke) is future work — see §6.
 
@@ -935,3 +1020,162 @@ dictionary, with no frequency data at all, so it can't yet answer
 говоришь was a judgment call, not the product of that ranking —
 finding or building it is a prerequisite for doing this systematically
 rather than one word at a time.
+
+## 14. Commands
+
+### Cursor movement
+
+**Not text, so not phonetic — ported by physical key position instead,
+the same methodology already used for `-Т`'s capitalization marker
+(§5).** Command strokes like these don't spell anything; there's no
+Russian sound to derive a combo from. What they *do* need is to never
+collide with a real word outline, and to stay learnable by someone who
+already knows Lapwing's version. Reusing Lapwing's own cursor-movement
+chords verbatim, translated key-for-key through `KEYMAPS`'s "Plover
+HID" physical positions (both systems target the same 22-key
+Stenotype-shaped board), satisfies both at once: no new design to
+invent, and no risk of accidentally shadowing a word.
+
+**Source: Lapwing's own `lapwing-commands.json`** (bundled with the
+`plover-lapwing-aio` plugin already in this setup), every entry with
+the `#TPH` prefix — the whole cursor-movement family: arrows, Ctrl
+word-jumps, Home/End, Page Up/Down, and their Shift-select variants,
+plus 2×/3×/4× repeats built by stacking extra right-bank keys rather
+than pressing the same stroke multiple times.
+
+**The `#` key carries over unchanged.** In English steno `#TPH` isn't
+a real word either — `#` there is the number bar, used purely as a
+mode marker to keep this whole family out of ordinary word-outline
+space. This theory's own `#` was never claimed by anything (§6, §12)
+for exactly the same reason it was left alone this whole project:
+kept in reserve for a future number system. Using it here doesn't
+spend that reservation on cursor commands specifically — it's the
+same "guaranteed collision-free prefix" role in both systems, and
+every other Firebird dictionary already avoids `#` entirely, so
+nothing new needs checking on that front: no word, suffix, prefix, or
+fingerspelling entry has ever used it.
+
+**T-, P-, H- (English's "N" chord, meaningless here beyond being the
+mode marker) map by physical position to `Т-`, `В-`, `М-`.** Checked
+against `KEYMAPS["Plover HID"]` on both systems (English's own
+`Plover HID` map in `plover/system/english_stenotype.py`, and this
+theory's own, §2): T- sits at HID `T-`, which this board's `Т-` also
+occupies; P- sits at HID `P-`, occupied here by `В-`; H- sits at HID
+`H-`, occupied here by `М-`. None of these three letters carry their
+usual Cyrillic meaning in this context — `ТВМ` isn't a word fragment,
+just the physical footprint of Lapwing's own mode-marker chord.
+
+**Right-bank keys map the same way:** English `-F/-R/-P/-B/-L/-G/-T/-S`
+sit at HID `-F/-R/-P/-B/-L/-G/-T/-S`, occupied on this board by
+`-И/-С/-Т/-Л/-В/-К/-М/-Р` respectively (§2's own table, reversed).
+`*` needs no translation — both systems' star sits at the same `*1`-`*4`
+HID group.
+
+**Rendered against the real stroke encoder, not by hand** — this
+board reuses letter names across both banks (`В`/`М`/`Т` each exist as
+both a left-bank direct key and an unrelated right-bank one), so a
+translated command can land keys on both banks that happen to share a
+letter name with each other under the hyphen. Hand-deriving hyphen
+placement here would be guesswork; `plover.steno.Stroke.setup` with
+this system's own `KEYS`/`IMPLICIT_HYPHEN_KEYS` settled it exactly, the
+same tool used for every other rendering decision in this project.
+Checked pairwise-unique across all 40 translated entries and against
+every other dictionary (guaranteed by the `#` prefix, verified anyway).
+
+All 40, in `dictionaries/firebird-commands.json`:
+
+| Firebird | Lapwing | Action |
+|---|---|---|
+| `#ТВМ*ИС` | `#TPH*FR` | Shift+Home |
+| `#ТВМ*ИЛВ` | `#TPH*FBL` | Shift+Page Down |
+| `#ТВМ*С` | `#TPH*R` | Shift+Left |
+| `#ТВМ*СТК` | `#TPH*RPG` | Shift+Page Up |
+| `#ТВМ*СЛ` | `#TPH*RB` | Ctrl+Shift+Left |
+| `#ТВМ*Т` | `#TPH*P` | Shift+Up |
+| `#ТВМ*Л` | `#TPH*B` | Shift+Down |
+| `#ТВМ*ЛК` | `#TPH*BG` | Ctrl+Shift+Right |
+| `#ТВМ*ВК` | `#TPH*LG` | Shift+End |
+| `#ТВМ*К` | `#TPH*G` | Shift+Right |
+| `#ТВМ-ИС` | `#TPH-FR` | Home |
+| `#ТВМ-ИТВ` | `#TPH-FPL` | Ctrl+Home |
+| `#ТВМ-ИЛВ` | `#TPH-FBL` | Page Down |
+| `#ТВМ-С` | `#TPH-R` | Left |
+| `#ТВМ-СТК` | `#TPH-RPG` | Page Up |
+| `#ТВМ-СЛ` | `#TPH-RB` | Ctrl+Left |
+| `#ТВМ-СЛК` | `#TPH-RBG` | Ctrl+End |
+| `#ТВМ-СЛМ` | `#TPH-RBT` | Ctrl+Left ×3 |
+| `#ТВМ-СЛМР` | `#TPH-RBTS` | Ctrl+Left ×4 |
+| `#ТВМ-СЛР` | `#TPH-RBS` | Ctrl+Left ×2 |
+| `#ТВМ-СМ` | `#TPH-RT` | Left ×3 |
+| `#ТВМ-СМР` | `#TPH-RTS` | Left ×4 |
+| `#ТВМ-СР` | `#TPH-RS` | Left ×2 |
+| `#ТВМ-Т` | `#TPH-P` | Up |
+| `#ТВМ-ТМ` | `#TPH-PT` | Up ×3 |
+| `#ТВМ-ТМР` | `#TPH-PTS` | Up ×4 |
+| `#ТВМ-ТР` | `#TPH-PS` | Up ×2 |
+| `#ТВМ-Л` | `#TPH-B` | Down |
+| `#ТВМ-ЛК` | `#TPH-BG` | Ctrl+Right |
+| `#ТВМ-ЛКМ` | `#TPH-BGT` | Ctrl+Right ×3 |
+| `#ТВМ-ЛКМР` | `#TPH-BGTS` | Ctrl+Right ×4 |
+| `#ТВМ-ЛКР` | `#TPH-BGS` | Ctrl+Right ×2 |
+| `#ТВМ-ЛМ` | `#TPH-BT` | Down ×3 |
+| `#ТВМ-ЛМР` | `#TPH-BTS` | Down ×4 |
+| `#ТВМ-ЛР` | `#TPH-BS` | Down ×2 |
+| `#ТВМ-ВК` | `#TPH-LG` | End |
+| `#ТВМ-К` | `#TPH-G` | Right |
+| `#ТВМ-КМ` | `#TPH-GT` | Right ×3 |
+| `#ТВМ-КМР` | `#TPH-GTS` | Right ×4 |
+| `#ТВМ-КР` | `#TPH-GS` | Right ×2 |
+
+### Case formatting
+
+**Same methodology, one wrinkle: English `S-` isn't a single physical
+key on this hardware, so it needed a judgment call, not a lookup.**
+Source: the same `lapwing-commands.json`, the `SKWR`-prefixed case
+family (`{:case:...}`/`{:retro_case:...}` — capitalize/uppercase/
+lowercase the first word or character, plain and retroactive).
+`SKWR` = English S-, K-, W-, R-. K-, W-, R- map the same way as
+before — single, unambiguous HID positions (`K-`→`П-`, `W-`→`К-`,
+`R-`→`Р-`). `S-` is different: English's own `Plover HID` map lists
+*two* HID codes for it, `S1-` and `S2-`, because on generic steno
+hardware a tall split "S" key can register either half as "S-".
+On *this* keyboard those two codes aren't two halves of one key —
+system.py's own keymap comment says `S1-` is physically the number
+bar and `S2-` is the tall left-pinky key, two unrelated buttons. The
+real physical layout (§2's docstring) confirms it: `С` is listed as
+its own tall single left-hand key, entirely separate from the number
+bar row. So `С-` — not `#` — is the genuine physical match for
+English's `S-`: it's the button a steno typist's left pinky actually
+reaches for, on both machines. (`#` already has its own, unrelated
+correspondence to English's separate, dedicated `#` key, used
+throughout cursor movement above — this doesn't change that.)
+
+**No `#` prefix on any of these, so — unlike cursor movement — they
+needed a real collision check, not a free pass.** `СПКР` (bare, no
+vowel, no `#`) is safe by the same reasoning §9 already established
+for the `ПКР-` ending prefix: a bare multi-consonant stroke with no
+vowel at all never occurs in a real Russian word, so a 4-consonant
+version is safe for the same reason a 3-consonant one already was.
+Checked anyway, exactly, against every dictionary in the project —
+zero hits.
+
+| Firebird | Lapwing | Action |
+|---|---|---|
+| `СПКР` | `SKWR` | (attach point only) |
+| `СПКР-И` | `SKWR-F` | Capitalize first word |
+| `СПКР-ИТ` | `SKWR-FP` | Uppercase first word |
+| `СПКР-ИТь` | `SKWR-FPD` | Uppercase first word (retroactive) |
+| `СПКР-Иь` | `SKWR-FD` | Capitalize first word (retroactive) |
+| `СПКР-С` | `SKWR-R` | Lowercase first character |
+| `СПКР-Сь` | `SKWR-RD` | Lowercase first character (retroactive) |
+
+`firebird-commands.json` is now in `DEFAULT_DICTIONARIES` (§3), so it
+loads automatically for a fresh install; an already-configured Plover
+profile still needs it added manually through Configure → Dictionaries,
+the same one-time step every other dictionary in this project has
+needed after being added (§3's recurring setup note). More command
+categories are expected to follow the same pattern — find the
+equivalent Lapwing chord, translate by physical position (checking
+`KEYMAPS` on both sides rather than assuming a key is unambiguous, as
+`S-` here turned out not to be), and verify against the real encoder —
+one category at a time rather than guessing ahead at what's needed.
